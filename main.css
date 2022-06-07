@@ -1,0 +1,37 @@
+h1 {
+    display: grid;
+    text-align: center;
+    font-size: 50px;
+    color: red;
+}
+
+#game_box {
+    display: grid;
+    grid-template-columns: auto auto;
+    background-color: wheat;
+    margin-left: 5%;
+    margin-right: 5%;
+}
+
+.game {
+    border: 1px solid black;
+    margin: 5px;
+    text-align: center;
+    padding: 2px;
+}
+a {
+    text-decoration: none;
+    font-size: 20px;
+}
+
+a:link {
+    color: skyblue;
+}
+
+a:visited {
+    color: skyblue;
+}
+
+a:hover {
+    color: blue;
+}
