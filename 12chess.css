@@ -84,3 +84,6 @@ h1 {
     margin-left: 245px;
     margin-bottom: 200px;
 }
+#hint {
+    position: absolute;
+}
