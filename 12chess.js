@@ -32,11 +32,25 @@ let mouseInfo = {
     oY: 0,
     last_oX_oY: [-1,-1],
     checkClick: 0       //2로 나눠을때 나머지가 1일때 클릭(선택)된것, 클릭(선택)됐을때 oX,oY는 고정된다.
-}
+};
 
+let game_over = 0;      //1:red 승리 2:green 승리
+let red_king_enterd = false;
+let green_king_enterd = false;
 let turn = 0;  //0:red    1:green
-
 let possible_move = [];
+
+function find_opponent_castle(player) {
+    let result = -1;
+    if (player == 'green') {
+        result = 5;
+    }
+    else {
+        result = 2;
+    }
+
+    return result;
+}
 
 function find_unit_index_form_d(d_num) {
     for(let i=0;i<8;i++) {
@@ -85,9 +99,20 @@ function pocket_push(d_num, player) {
 }
 
 function find_index_from_location(x,y) {
-    let i = parseInt(y/200) + 2;
-    let j = parseInt((x-300)/200);
-    let result = [i,j];
+    let i ,j, result;
+    if(x<300 && y<200) {
+        i = parseInt(y/100);
+        j = parseInt(x/100);
+    }
+    else if(x > 900 && y > 600) {
+        i = parseInt(y/100);
+        j = parseInt((x-900)/100);
+    }
+    else {
+        i = parseInt(y/200) + 2;
+        j = parseInt((x-300)/200);
+    }
+    result = [i,j];
 
     return result;
 }
@@ -137,6 +162,47 @@ const board = {
     ctx: document.getElementById("game_board").getContext("2d"),
     cv2: document.getElementById("hint"),
     ctx2: document.getElementById("hint").getContext("2d"),
+
+    initialization: function() {
+        unit = [
+            {distinguishable_number: '0',player: 'green', kind: '將', move: [3,6,9,12]},           //sX - 0:300, 1:500, 2:700           [200*sX + 300]
+            {distinguishable_number: '1',player: 'green', kind: '王', move: [1,3,5,6,7,9,11,12]},  //sY - 0:0,   1:200, 2:400, 3: 600   [200*sY]
+            {distinguishable_number: '2',player: 'green', kind: '相', move: [1,5,7,11]},
+            {distinguishable_number: '3',player: 'green', kind: '子', move: [6]},      //後일때 move [3,5,6,7,9,12]
+            {distinguishable_number: '7',player: 'red', kind: '將', move: [3,6,9,12]},
+            {distinguishable_number: '6',player: 'red', kind: '王', move: [1,3,5,6,7,9,11,12]},
+            {distinguishable_number: '5',player: 'red', kind: '相', move: [1,5,7,11]},
+            {distinguishable_number: '4',player: 'red', kind: '子', move: [12]},       ////後일때 move [1,3,6,9,11,12]
+        ];
+        board_condition = [[-1,-1,-1],
+                           [-1,-1,-1],
+                           [0,1,2],
+                           [-1,3,-1],
+                           [-1,4,-1],        //i:sY, j:sX
+                           [5,6,7],
+                           [-1,-1,-1],
+                           [-1,-1,-1]];       //1:green 2:red 0:빈칸
+        mouseInfo = {
+            oX: 0,
+            oY: 0,
+            last_oX_oY: [-1,-1],
+            checkClick: 0       //2로 나눠을때 나머지가 1일때 클릭(선택)된것, 클릭(선택)됐을때 oX,oY는 고정된다.
+        };
+        game_over = 0;      //1:red 승리 2:green 승리
+        turn = 0;  //0:red    1:green
+        possible_move = [];
+    },
+
+    clear: function() {
+        this.cv.width = 1200;
+        this.cv.height = 800;
+        let ctx = this.ctx;
+        this.cv2.width = 1200;
+        this.cv2.height = 800;
+        let ctx2 = this.ctx2;
+
+        ctx.clearRect(0,0,1200,800);
+    },
 
     draw: function() {
         this.cv.width = 1200;
@@ -626,9 +692,47 @@ const board = {
             //힌트그리기 끝  
 
         }
-    }
+    },
     //draw끝
+
+    game_over_and_show_result: function() {
+        this.cv.width = 1200;
+        this.cv.height = 400;
+        let ctx = this.ctx;
+
+        if(game_over == 1) {    //red win!
+            ctx.beginPath();
+            ctx.strokeStyle = 'red';
+            ctx.rect(5, 5, 1190, 390);
+            ctx.font = '100px sans-serif';
+            ctx.lineWidth = 5;
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.fillText('Red Win!', 600, 225);
+            ctx.stroke();
+        }
+        else {
+            ctx.beginPath();
+            ctx.strokeStyle = 'green';
+            ctx.rect(5, 5, 1190, 390);
+            ctx.font = '100px sans-serif';
+            ctx.lineWidth = 5;
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.fillStyle = 'black';
+            ctx.textAlign = 'center';
+            ctx.fillText('Green Win!', 600, 225);
+            ctx.stroke();
+        }
+    }
+
 }
+
+
+/*----------------------------------- 게임 시작 관련 영역 -----------------------------------*/
+
 
 function hide_unnecessary_elements() {
     let elements = document.getElementsByClassName("hide");
@@ -641,178 +745,446 @@ function solo_game_start() {
     hide_unnecessary_elements();
     board.draw();
     board.cv2.addEventListener('mousemove', (e) => {
-        if(mouseInfo.checkClick%2 === 0) {
-            mouseInfo.oX = e.offsetX;
-            mouseInfo.oY = e.offsetY;
-            board.draw();
+        if(game_over == 0) {
+            if(mouseInfo.checkClick%2 === 0) {
+                mouseInfo.oX = e.offsetX;
+                mouseInfo.oY = e.offsetY;
+                board.draw();
+            }
         }
     });
     board.cv2.addEventListener('click', (e) => {
-        //턴에 따라 선택할수있는거 변동
-        if(turn % 2 == 0) {         //레드턴 일때
-            let selected_unit_location = [];
-            let selected_unit;
-            if(mouseInfo.checkClick%2 === 0) {          //말 선택할때
-                let sX = -100;
-                let sY = -100;
-                let size = 0;
-                
-                for(let i=0;i<unit.length;i++) {
-                    let d_number = unit[i].distinguishable_number;
-                    if(unit[i].player == 'red') {
-                        for(let j=0;j<8;j++) {
-                            for(let k=0;k<3;k++) {
-                                if(board_condition[j][k] == d_number) {
-                                    if (j>=2 && j<=5 && k>=0 && k<=2) {    //경기보드안에 있을때
-                                        size = 180;
-                                        sX = (k)*200 + 300;
-                                        sY = (j-2)*200;
-                                    }
-                                    else {
-                                        size = 90;
-                                        if (unit[i].player == 'green') {
-                                            sX = k*100;
-                                            sY = j*100;
+        if(game_over == 0) {
+            //턴에 따라 선택할수있는거 변동
+            if(turn % 2 == 0) {         //레드턴 일때
+                let selected_unit_location = [];
+                let selected_unit;
+                if(mouseInfo.checkClick%2 === 0) {          //말 선택할때
+                    let sX = -100;
+                    let sY = -100;
+                    let size = 0;
+                    
+                    for(let i=0;i<unit.length;i++) {
+                        let d_number = unit[i].distinguishable_number;
+                        if(unit[i].player == 'red') {
+                            for(let j=0;j<8;j++) {
+                                for(let k=0;k<3;k++) {
+                                    if(board_condition[j][k] == d_number) {
+                                        if (j>=2 && j<=5 && k>=0 && k<=2) {    //경기보드안에 있을때
+                                            size = 180;
+                                            sX = (k)*200 + 300;
+                                            sY = (j-2)*200;
                                         }
                                         else {
-                                            sX = k*100 + 900;
-                                            sY = j*100;
+                                            size = 90;
+                                            if (unit[i].player == 'green') {
+                                                sX = k*100;
+                                                sY = j*100;
+                                            }
+                                            else {
+                                                sX = k*100 + 900;
+                                                sY = j*100;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    if(e.offsetX > sX && e.offsetX < sX+size*11/10 && e.offsetY > sY && e.offsetY < sY+size*11/10) {
-                        mouseInfo.checkClick++;
-                        mouseInfo.last_oX_oY[0] = e.offsetX;
-                        mouseInfo.last_oX_oY[1] = e.offsetY;
-                        board.draw();
-                        break;
-                    }
-                }  
-            }
-            else {      //말 선택됐을때
-                if(e.offsetX >= 300 && e.offsetX <= 900 && e.offsetY >= 0 && e.offsetY <= 800) {
-                    mouseInfo.checkClick++;
-                    let location = find_index_from_location(mouseInfo.last_oX_oY[0],mouseInfo.last_oX_oY[1]);
-                    selected_unit_location.push(location[0]);
-                    selected_unit_location.push(location[1]);
-                    selected_unit = find_unit(location[0],location[1]);
-                    mouseInfo.last_oX_oY[0] = e.offsetX;
-                    mouseInfo.last_oX_oY[1] = e.offsetY;
-                    let index = find_index_from_location(mouseInfo.last_oX_oY[0], mouseInfo.last_oX_oY[1]);
-                    let possible = false;
-                    for(let i=0;i<possible_move.length;i++) {
-                        let temp = possible_move[i];
-                        if(temp[0] == index[0] && temp[1] == index[1]) {
-                            possible = true;
+                        if(e.offsetX > sX && e.offsetX < sX+size*11/10 && e.offsetY > sY && e.offsetY < sY+size*11/10) {
+                            mouseInfo.checkClick++;
+                            mouseInfo.last_oX_oY[0] = e.offsetX;
+                            mouseInfo.last_oX_oY[1] = e.offsetY;
+                            board.draw();
                             break;
                         }
-                    }
-                    if(possible) {
-                        board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;
-                        let d_num = board_condition[index[0]][index[1]];
-                        if(d_num == -1) {
-                            board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                    }  
+                }
+                else {      //말 선택됐을때
+                    if(e.offsetX >= 300 && e.offsetX <= 900 && e.offsetY >= 0 && e.offsetY <= 800) {
+                        mouseInfo.checkClick++;
+                        let location = find_index_from_location(mouseInfo.last_oX_oY[0],mouseInfo.last_oX_oY[1]);
+                        selected_unit_location.push(location[0]);
+                        selected_unit_location.push(location[1]);
+                        selected_unit = find_unit(location[0],location[1]);
+                        mouseInfo.last_oX_oY[0] = e.offsetX;
+                        mouseInfo.last_oX_oY[1] = e.offsetY;
+                        let index = find_index_from_location(mouseInfo.last_oX_oY[0], mouseInfo.last_oX_oY[1]);
+                        let possible = false;
+                        for(let i=0;i<possible_move.length;i++) {
+                            let temp = possible_move[i];
+                            if(temp[0] == index[0] && temp[1] == index[1]) {
+                                possible = true;
+                                break;
+                            }
+                        }
+                        if(possible) {
+                            if(green_king_enterd) {
+                                game_over = 2;
+                            }
+                            board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;
+                            let d_num = board_condition[index[0]][index[1]];
+                            if(selected_unit[1] == 4) {                                             //고른말이 자 일때 
+                                if(find_opponent_castle('red') == index[0]) {                       //상대 진영으로 넘어가면
+                                    unit[find_unit_index_form_d(selected_unit[1])].kind = '後';     //후로 바뀐다
+                                    unit[find_unit_index_form_d(selected_unit[1])].move = [1,3,6,9,11,12];
+                                }
+                            }
+                            if(selected_unit[1] == 6) {            //고른말이 왕 일때
+                                if(find_opponent_castle('red') == index[0]) {
+                                    red_king_enterd = true;
+                                }
+                            }
+                            if(d_num == -1) {
+                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                            }
+                            else if(d_num == 1) {
+                                game_over = 1;
+                            }
+                            else {
+                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                                pocket_push(d_num,'red');
+                            }
+                            possible_move = [];
+                            turn++;
+                        }
+                        if(game_over == 0) {
+                            board.draw();
                         }
                         else {
-                            board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
-                            pocket_push(d_num,'red');
+                            board.clear();
+                            board.game_over_and_show_result();
                         }
-                        possible_move = [];
-                        turn++;
                     }
-                    board.draw();
                 }
-            }
-        }        //레드 턴일때 끝
-        
-        else {      //초록 턴일때
-            let selected_unit_location = [];
-            let selected_unit;
-            if(mouseInfo.checkClick%2 === 0) {          //말 선택할때
-                let sX = -100;
-                let sY = -100;
-                let size = 0;
-                
-                for(let i=0;i<unit.length;i++) {
-                    let d_number = unit[i].distinguishable_number;
-                    if(unit[i].player == 'green') {
-                        for(let j=0;j<8;j++) {
-                            for(let k=0;k<3;k++) {
-                                if(board_condition[j][k] == d_number) {
-                                    if (j>=2 && j<=5 && k>=0 && k<=2) {    //경기보드안에 있을때
-                                        size = 180;
-                                        sX = (k)*200 + 300;
-                                        sY = (j-2)*200;
-                                    }
-                                    else {
-                                        size = 90;
-                                        if (unit[i].player == 'green') {
-                                            sX = k*100;
-                                            sY = j*100;
+            }        //레드 턴일때 끝
+            
+            else {      //초록 턴일때
+                let selected_unit_location = [];
+                let selected_unit;
+                if(mouseInfo.checkClick%2 === 0) {          //말 선택할때
+                    let sX = -100;
+                    let sY = -100;
+                    let size = 0;
+                    
+                    for(let i=0;i<unit.length;i++) {
+                        let d_number = unit[i].distinguishable_number;
+                        if(unit[i].player == 'green') {
+                            for(let j=0;j<8;j++) {
+                                for(let k=0;k<3;k++) {
+                                    if(board_condition[j][k] == d_number) {
+                                        if (j>=2 && j<=5 && k>=0 && k<=2) {    //경기보드안에 있을때
+                                            size = 180;
+                                            sX = (k)*200 + 300;
+                                            sY = (j-2)*200;
                                         }
                                         else {
-                                            sX = k*100 + 900;
-                                            sY = j*100;
+                                            size = 90;
+                                            if (unit[i].player == 'green') {
+                                                sX = k*100;
+                                                sY = j*100;
+                                            }
+                                            else {
+                                                sX = k*100 + 900;
+                                                sY = j*100;
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
-                    }
-                    if(e.offsetX > sX && e.offsetX < sX+size*11/10 && e.offsetY > sY && e.offsetY < sY+size*11/10) {
-                        mouseInfo.checkClick++;
-                        mouseInfo.last_oX_oY[0] = e.offsetX;
-                        mouseInfo.last_oX_oY[1] = e.offsetY;
-                        board.draw();
-                        break;
-                    }
-                }  
-            }
-            else {      //말 선택됐을때
-                if(e.offsetX >= 300 && e.offsetX <= 900 && e.offsetY >= 0 && e.offsetY <= 800) {
-                    mouseInfo.checkClick++;
-                    let location = find_index_from_location(mouseInfo.last_oX_oY[0],mouseInfo.last_oX_oY[1]);
-                    selected_unit_location.push(location[0]);
-                    selected_unit_location.push(location[1]);
-                    selected_unit = find_unit(location[0],location[1]);
-                    mouseInfo.last_oX_oY[0] = e.offsetX;
-                    mouseInfo.last_oX_oY[1] = e.offsetY;
-                    let index = find_index_from_location(mouseInfo.last_oX_oY[0], mouseInfo.last_oX_oY[1]);
-                    let possible = false;
-                    for(let i=0;i<possible_move.length;i++) {
-                        let temp = possible_move[i];
-                        if(temp[0] == index[0] && temp[1] == index[1]) {
-                            possible = true;
+                        if(e.offsetX > sX && e.offsetX < sX+size*11/10 && e.offsetY > sY && e.offsetY < sY+size*11/10) {
+                            mouseInfo.checkClick++;
+                            mouseInfo.last_oX_oY[0] = e.offsetX;
+                            mouseInfo.last_oX_oY[1] = e.offsetY;
+                            board.draw();
                             break;
                         }
-                    }
-                    if(possible) {
-                        board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;
-                        let d_num = parseInt(board_condition[index[0]][index[1]]);
-                        if(d_num == -1) {
-                            board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                    }  
+                }
+                else {      //말 선택됐을때
+                    if((e.offsetX >= 300 && e.offsetX <= 900 && e.offsetY >= 0 && e.offsetY <= 800) || (e.offsetX >= 0 && e.offsetX <= 300 && e.offsetY >= 0 && e.offsetY<=200) || (e.offsetX>=900 && e.offsetY >= 600)) {
+                        mouseInfo.checkClick++;
+                        let location = find_index_from_location(mouseInfo.last_oX_oY[0],mouseInfo.last_oX_oY[1]);
+                        selected_unit_location.push(location[0]);
+                        selected_unit_location.push(location[1]);
+                        selected_unit = find_unit(location[0],location[1]);
+                        mouseInfo.last_oX_oY[0] = e.offsetX;
+                        mouseInfo.last_oX_oY[1] = e.offsetY;
+                        let index = find_index_from_location(mouseInfo.last_oX_oY[0], mouseInfo.last_oX_oY[1]); //클릭한곳(말을 움직일곳)
+                        let possible = false;
+                        for(let i=0;i<possible_move.length;i++) {
+                            let temp = possible_move[i];
+                            if(temp[0] == index[0] && temp[1] == index[1]) {
+                                possible = true;
+                                break;
+                            }
+                        }
+                        if(possible) {
+                            if(red_king_enterd) {
+                                game_over = 1;
+                            }
+                            board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;     //움직인 말의 원래자리는 빈자리
+                            let d_num = parseInt(board_condition[index[0]][index[1]]);      //바꿀 말확인
+                            console.log(selected_unit[1],find_opponent_castle('green'), index[0]);
+                            if(selected_unit[1] == 3) {
+                                if(find_opponent_castle('green') == index[0]) {
+                                    unit[find_unit_index_form_d(selected_unit[1])].kind = '後';
+                                    unit[find_unit_index_form_d(selected_unit[1])].move = [3,5,6,7,9,12];
+                                }
+                            }
+                            if(selected_unit[1] == 1) {            //고른말이 왕 일때
+                                if(find_opponent_castle('green') == index[0]) {
+                                    green_king_enterd = true;
+                                }
+                            }
+                            if(d_num == -1) {
+                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                            }
+                            else if(d_num == 6) {
+                                game_over = 2;
+                            }
+                            else {
+                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                                pocket_push(d_num,'green');
+                            }
+                            possible_move = [];
+                            turn++;
+                        }
+                        if(game_over == 0) {
+                            board.draw();
                         }
                         else {
-                            board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
-                            pocket_push(d_num,'green');
+                            board.clear();
+                            board.game_over_and_show_result();
                         }
-                        possible_move = [];
-                        turn++;
                     }
-                    board.draw();
                 }
-            }
-        }   //초록턴일때 끝
-        
+            }   //초록턴일때 끝
+        }
     });
 }
 
 function multi_game_start() {
     hide_unnecessary_elements();
     board.draw(unit, mouseInfo);
+    board.cv2.addEventListener('mousemove', (e) => {
+        if(game_over == 0) {
+            if(mouseInfo.checkClick%2 === 0) {
+                mouseInfo.oX = e.offsetX;
+                mouseInfo.oY = e.offsetY;
+                board.draw();
+            }
+        }
+    });
+    board.cv2.addEventListener('click', (e) => {
+        if(game_over == 0) {
+            //턴에 따라 선택할수있는거 변동
+            if(turn % 2 == 0) {         //레드턴 일때
+                let selected_unit_location = [];
+                let selected_unit;
+                if(mouseInfo.checkClick%2 === 0) {          //말 선택할때
+                    let sX = -100;
+                    let sY = -100;
+                    let size = 0;
+                    
+                    for(let i=0;i<unit.length;i++) {
+                        let d_number = unit[i].distinguishable_number;
+                        if(unit[i].player == 'red') {
+                            for(let j=0;j<8;j++) {
+                                for(let k=0;k<3;k++) {
+                                    if(board_condition[j][k] == d_number) {
+                                        if (j>=2 && j<=5 && k>=0 && k<=2) {    //경기보드안에 있을때
+                                            size = 180;
+                                            sX = (k)*200 + 300;
+                                            sY = (j-2)*200;
+                                        }
+                                        else {
+                                            size = 90;
+                                            if (unit[i].player == 'green') {
+                                                sX = k*100;
+                                                sY = j*100;
+                                            }
+                                            else {
+                                                sX = k*100 + 900;
+                                                sY = j*100;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if(e.offsetX > sX && e.offsetX < sX+size*11/10 && e.offsetY > sY && e.offsetY < sY+size*11/10) {
+                            mouseInfo.checkClick++;
+                            mouseInfo.last_oX_oY[0] = e.offsetX;
+                            mouseInfo.last_oX_oY[1] = e.offsetY;
+                            board.draw();
+                            break;
+                        }
+                    }  
+                }
+                else {      //말 선택됐을때
+                    if(e.offsetX >= 300 && e.offsetX <= 900 && e.offsetY >= 0 && e.offsetY <= 800) {
+                        mouseInfo.checkClick++;
+                        let location = find_index_from_location(mouseInfo.last_oX_oY[0],mouseInfo.last_oX_oY[1]);
+                        selected_unit_location.push(location[0]);
+                        selected_unit_location.push(location[1]);
+                        selected_unit = find_unit(location[0],location[1]);
+                        mouseInfo.last_oX_oY[0] = e.offsetX;
+                        mouseInfo.last_oX_oY[1] = e.offsetY;
+                        let index = find_index_from_location(mouseInfo.last_oX_oY[0], mouseInfo.last_oX_oY[1]);
+                        let possible = false;
+                        for(let i=0;i<possible_move.length;i++) {
+                            let temp = possible_move[i];
+                            if(temp[0] == index[0] && temp[1] == index[1]) {
+                                possible = true;
+                                break;
+                            }
+                        }
+                        if(possible) {
+                            if(green_king_enterd) {
+                                game_over = 2;
+                            }
+                            board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;
+                            let d_num = board_condition[index[0]][index[1]];
+                            if(selected_unit[1] == 4) {                                             //고른말이 자 일때 
+                                if(find_opponent_castle('red') == index[0]) {                       //상대 진영으로 넘어가면
+                                    unit[find_unit_index_form_d(selected_unit[1])].kind = '後';     //후로 바뀐다
+                                    unit[find_unit_index_form_d(selected_unit[1])].move = [1,3,6,9,11,12];
+                                }
+                            }
+                            if(selected_unit[1] == 6) {            //고른말이 왕 일때
+                                if(find_opponent_castle('red') == index[0]) {
+                                    red_king_enterd = true;
+                                }
+                            }
+                            if(d_num == -1) {
+                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                            }
+                            else if(d_num == 1) {
+                                game_over = 1;
+                            }
+                            else {
+                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                                pocket_push(d_num,'red');
+                            }
+                            possible_move = [];
+                            turn++;
+                        }
+                        if(game_over == 0) {
+                            board.draw();
+                        }
+                        else {
+                            board.clear();
+                            board.game_over_and_show_result();
+                        }
+                    }
+                }
+            }        //레드 턴일때 끝
+            
+            else {      //초록 턴일때
+                let selected_unit_location = [];
+                let selected_unit;
+                if(mouseInfo.checkClick%2 === 0) {          //말 선택할때
+                    let sX = -100;
+                    let sY = -100;
+                    let size = 0;
+                    
+                    for(let i=0;i<unit.length;i++) {
+                        let d_number = unit[i].distinguishable_number;
+                        if(unit[i].player == 'green') {
+                            for(let j=0;j<8;j++) {
+                                for(let k=0;k<3;k++) {
+                                    if(board_condition[j][k] == d_number) {
+                                        if (j>=2 && j<=5 && k>=0 && k<=2) {    //경기보드안에 있을때
+                                            size = 180;
+                                            sX = (k)*200 + 300;
+                                            sY = (j-2)*200;
+                                        }
+                                        else {
+                                            size = 90;
+                                            if (unit[i].player == 'green') {
+                                                sX = k*100;
+                                                sY = j*100;
+                                            }
+                                            else {
+                                                sX = k*100 + 900;
+                                                sY = j*100;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if(e.offsetX > sX && e.offsetX < sX+size*11/10 && e.offsetY > sY && e.offsetY < sY+size*11/10) {
+                            mouseInfo.checkClick++;
+                            mouseInfo.last_oX_oY[0] = e.offsetX;
+                            mouseInfo.last_oX_oY[1] = e.offsetY;
+                            board.draw();
+                            break;
+                        }
+                    }  
+                }
+                else {      //말 선택됐을때
+                    if((e.offsetX >= 300 && e.offsetX <= 900 && e.offsetY >= 0 && e.offsetY <= 800) || (e.offsetX >= 0 && e.offsetX <= 300 && e.offsetY >= 0 && e.offsetY<=200) || (e.offsetX>=900 && e.offsetY >= 600)) {
+                        mouseInfo.checkClick++;
+                        let location = find_index_from_location(mouseInfo.last_oX_oY[0],mouseInfo.last_oX_oY[1]);
+                        selected_unit_location.push(location[0]);
+                        selected_unit_location.push(location[1]);
+                        selected_unit = find_unit(location[0],location[1]);
+                        mouseInfo.last_oX_oY[0] = e.offsetX;
+                        mouseInfo.last_oX_oY[1] = e.offsetY;
+                        let index = find_index_from_location(mouseInfo.last_oX_oY[0], mouseInfo.last_oX_oY[1]); //클릭한곳(말을 움직일곳)
+                        let possible = false;
+                        for(let i=0;i<possible_move.length;i++) {
+                            let temp = possible_move[i];
+                            if(temp[0] == index[0] && temp[1] == index[1]) {
+                                possible = true;
+                                break;
+                            }
+                        }
+                        if(possible) {
+                            if(red_king_enterd) {
+                                game_over = 1;
+                            }
+                            board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;     //움직인 말의 원래자리는 빈자리
+                            let d_num = parseInt(board_condition[index[0]][index[1]]);      //바꿀 말확인
+                            console.log(selected_unit[1],find_opponent_castle('green'), index[0]);
+                            if(selected_unit[1] == 3) {
+                                if(find_opponent_castle('green') == index[0]) {
+                                    unit[find_unit_index_form_d(selected_unit[1])].kind = '後';
+                                    unit[find_unit_index_form_d(selected_unit[1])].move = [3,5,6,7,9,12];
+                                }
+                            }
+                            if(selected_unit[1] == 1) {            //고른말이 왕 일때
+                                if(find_opponent_castle('green') == index[0]) {
+                                    green_king_enterd = true;
+                                }
+                            }
+                            if(d_num == -1) {
+                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                            }
+                            else if(d_num == 6) {
+                                game_over = 2;
+                            }
+                            else {
+                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
+                                pocket_push(d_num,'green');
+                            }
+                            possible_move = [];
+                            turn++;
+                        }
+                        if(game_over == 0) {
+                            board.draw();
+                        }
+                        else {
+                            board.clear();
+                            board.game_over_and_show_result();
+                        }
+                    }
+                }
+            }   //초록턴일때 끝
+        }
+    });
 }
 
 function show_img_one() {
