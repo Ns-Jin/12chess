@@ -119,7 +119,7 @@ function find_index_from_location(x,y) {
 
 function find_unit(x,y) {
     let result = [-1,-1,-1];
-    if(x != -1 && y != -1) {
+    if(x >= 0 && x<= 7 && y >=0 && y<=2) {
         let d_num = board_condition[x][y];
         for(let i=0;i<8;i++) {
             if(unit[i].distinguishable_number == d_num) {
@@ -131,7 +131,7 @@ function find_unit(x,y) {
         }
     }
     
-    return result;
+    return result;      //player, d_num, kind  반환
 }
 function find_empty(player) {
     let result = [];
@@ -823,7 +823,7 @@ function solo_game_start() {
                             }
                             board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;
                             let d_num = board_condition[index[0]][index[1]];
-                            if(selected_unit[1] == 4) {                                             //고른말이 자 일때 
+                            if(selected_unit[1] == 4 || selected_unit[1] == 3) {                                             //고른말이 자 일때 
                                 if(find_opponent_castle('red') == index[0]) {                       //상대 진영으로 넘어가면
                                     unit[find_unit_index_form_d(selected_unit[1])].kind = '後';     //후로 바뀐다
                                     unit[find_unit_index_form_d(selected_unit[1])].move = [1,3,6,9,11,12];
@@ -859,105 +859,325 @@ function solo_game_start() {
             }        //레드 턴일때 끝
             
             else {      //초록 턴일때
-                let selected_unit_location = [];
-                let selected_unit;
-                if(mouseInfo.checkClick%2 === 0) {          //말 선택할때
-                    let sX = -100;
-                    let sY = -100;
-                    let size = 0;
-                    
-                    for(let i=0;i<unit.length;i++) {
-                        let d_number = unit[i].distinguishable_number;
-                        if(unit[i].player == 'green') {
-                            for(let j=0;j<8;j++) {
-                                for(let k=0;k<3;k++) {
-                                    if(board_condition[j][k] == d_number) {
-                                        if (j>=2 && j<=5 && k>=0 && k<=2) {    //경기보드안에 있을때
-                                            size = 180;
-                                            sX = (k)*200 + 300;
-                                            sY = (j-2)*200;
-                                        }
-                                        else {
-                                            size = 90;
-                                            if (unit[i].player == 'green') {
-                                                sX = k*100;
-                                                sY = j*100;
+                let possible_gmae_over_unit = [];
+                let possible_catch_opponent_unit = [];
+                let possible_move_empty = [];
+
+                for(let i=0;i<unit.length;i++) {
+                    if(unit[i].player == 'green') {
+                        let index = find_unit_index_form_d(unit[i].distinguishable_number);     //초록유닛의 인덱스 확인
+                        let confirm = [];
+                        let move = unit[i].move;
+                        let xi,yj;
+                        if(index[0] < 2) {      //pocket에 있는거 꺼낼때
+                            let empty = find_empty('green');
+                            let is_good_place = [0,0,0];    //최대count_catch, x, y
+                            for(let j=0;j<empty.length;j++) {
+                                let count_catch = 0;    //놓았을때 잡을수있는 유닛의 갯수가 많을때
+                                move.forEach((k) => {
+                                    switch(k) {
+                                        case 1:
+                                            xi = empty[j][0] - 1;
+                                            yj = empty[j][1] + 1;
+                                            if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                                confirm = find_unit[xi][yj];
+                                                if(confirm[0] == 'red') {
+                                                    count_catch++;
+                                                }
                                             }
-                                            else {
-                                                sX = k*100 + 900;
-                                                sY = j*100;
+                                            break;
+
+                                        case 3:
+                                            xi = index[j][0];
+                                            yj = index[j][1] + 1;
+                                            if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                                confirm = find_unit[xi][yj];
+                                                if(confirm[0] == 'red') {
+                                                    count_catch++;
+                                                }
                                             }
-                                        }
+                                            break;
+
+                                        case 5:
+                                            xi = index[j][0] + 1;
+                                            yj = index[j][1] + 1;
+                                            if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                                confirm = find_unit[xi][yj];
+                                                if(confirm[0] == 'red') {
+                                                    count_catch++;
+                                                }
+                                            }
+                                            break;
+
+                                        case 6:
+                                            xi = index[j][0] + 1;
+                                            yj = index[j][1];
+                                            if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                                confirm = find_unit[xi][yj];
+                                                if(confirm[0] == 'red') {
+                                                    count_catch++;
+                                                }
+                                            }
+                                            break;
+
+                                        case 7:
+                                            xi = index[j][0] + 1;
+                                            yj = index[j][1] - 1;
+                                            if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                                confirm = find_unit[xi][yj];
+                                                if(confirm[0] == 'red') {
+                                                    count_catch++;
+                                                }
+                                            }
+                                            break;
+
+                                        case 9:
+                                            xi = index[j][0];
+                                            yj = index[j][1] - 1;
+                                            if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                                confirm = find_unit[xi][yj];
+                                                if(confirm[0] == 'red') {
+                                                    count_catch++;
+                                                }
+                                            }
+                                            break;
+
+                                        case 11:
+                                            xi = index[j][0] - 1;
+                                            yj = index[j][1] - 1;
+                                            if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                                confirm = find_unit[xi][yj];
+                                                if(confirm[0] == 'red') {
+                                                    count_catch++;
+                                                }
+                                            }
+                                            break;
+
+                                        case 12:
+                                            xi = index[j][0] - 1;
+                                            yj = index[j][1];
+                                            if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                                confirm = find_unit[xi][yj];
+                                                if(confirm[0] == 'red') {
+                                                    count_catch++;
+                                                }
+                                            }
+                                            break;
                                     }
+                                });
+                                if(is_good_place[0] <= count_catch) {
+                                    is_good_place[0] = count_catch;
+                                    is_good_place[1] = empty[j][0];
+                                    is_good_place[2] = empty[j][1];
                                 }
                             }
-                        }
-                        if(e.offsetX > sX && e.offsetX < sX+size*11/10 && e.offsetY > sY && e.offsetY < sY+size*11/10) {
-                            mouseInfo.checkClick++;
-                            mouseInfo.last_oX_oY[0] = e.offsetX;
-                            mouseInfo.last_oX_oY[1] = e.offsetY;
-                            board.draw();
-                            break;
-                        }
-                    }  
-                }
-                else {      //말 선택됐을때
-                    if((e.offsetX >= 300 && e.offsetX <= 900 && e.offsetY >= 0 && e.offsetY <= 800) || (e.offsetX >= 0 && e.offsetX <= 300 && e.offsetY >= 0 && e.offsetY<=200) || (e.offsetX>=900 && e.offsetY >= 600)) {
-                        mouseInfo.checkClick++;
-                        let location = find_index_from_location(mouseInfo.last_oX_oY[0],mouseInfo.last_oX_oY[1]);
-                        selected_unit_location.push(location[0]);
-                        selected_unit_location.push(location[1]);
-                        selected_unit = find_unit(location[0],location[1]);
-                        mouseInfo.last_oX_oY[0] = e.offsetX;
-                        mouseInfo.last_oX_oY[1] = e.offsetY;
-                        let index = find_index_from_location(mouseInfo.last_oX_oY[0], mouseInfo.last_oX_oY[1]); //클릭한곳(말을 움직일곳)
-                        let possible = false;
-                        for(let i=0;i<possible_move.length;i++) {
-                            let temp = possible_move[i];
-                            if(temp[0] == index[0] && temp[1] == index[1]) {
-                                possible = true;
-                                break;
-                            }
-                        }
-                        if(possible) {
-                            if(red_king_enterd) {
-                                game_over = 1;
-                            }
-                            board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;     //움직인 말의 원래자리는 빈자리
-                            let d_num = parseInt(board_condition[index[0]][index[1]]);      //바꿀 말확인
-                            console.log(selected_unit[1],find_opponent_castle('green'), index[0]);
-                            if(selected_unit[1] == 3) {
-                                if(find_opponent_castle('green') == index[0]) {
-                                    unit[find_unit_index_form_d(selected_unit[1])].kind = '後';
-                                    unit[find_unit_index_form_d(selected_unit[1])].move = [3,5,6,7,9,12];
-                                }
-                            }
-                            if(selected_unit[1] == 1) {            //고른말이 왕 일때
-                                if(find_opponent_castle('green') == index[0]) {
-                                    green_king_enterd = true;
-                                }
-                            }
-                            if(d_num == -1) {
-                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
-                            }
-                            else if(d_num == 6) {
-                                game_over = 2;
-                            }
-                            else {
-                                board_condition[index[0]][index[1]] = parseInt(selected_unit[1]);
-                                pocket_push(d_num,'green');
-                            }
-                            possible_move = [];
-                            turn++;
-                        }
-                        if(game_over == 0) {
-                            board.draw();
+                            possible_move_empty.push([i, is_good_place[1], is_good_place[2]]);
                         }
                         else {
-                            board.clear();
-                            board.game_over_and_show_result();
+                            move.forEach((j) => {
+                                switch(j) {
+                                    case 1:
+                                        xi = index[0] - 1;
+                                        yj = index[1] + 1;
+                                        if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                            confirm = find_unit[xi][yj];
+                                            if(confirm[0] == 'red') {       //움직일 수 있는곳에 red유닛이 있으면
+                                                if(board_condition[xi][yj] == 6) {      //움직일 수 있는 곳에 왕이 있으면
+                                                    let temp = [i,xi,yj];
+                                                    possible_gmae_over_unit.push(temp);
+                                                }
+                                                else {
+                                                    let temp = [i,xi,yj];
+                                                    possible_catch_opponent_unit.push(temp);
+                                                }
+                                            }
+                                            else if(confirm[0] != 'green') {
+                                                let temp = [i,xi,yj];
+                                                possible_move_empty.push(temp);
+                                            }
+                                        }
+                                        break;
+    
+                                    case 3:
+                                        xi = index[0];
+                                        yj = index[1] + 1;
+                                        if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                            confirm = find_unit[xi][yj];
+                                            if(confirm[0] == 'red') {       //움직일 수 있는곳에 red유닛이 있으면
+                                                if(board_condition[xi][yj] == 6) {      //움직일 수 있는 곳에 왕이 있으면
+                                                    let temp = [i,xi,yj];
+                                                    possible_gmae_over_unit.push(temp);
+                                                }
+                                                else {
+                                                    let temp = [i,xi,yj];
+                                                    possible_catch_opponent_unit.push(temp);
+                                                }
+                                            }
+                                            else if(confirm[0] != 'green') {
+                                                let temp = [i,xi,yj];
+                                                possible_move_empty.push(temp);
+                                            }
+                                        }
+                                        break;
+    
+                                    case 5:
+                                        xi = index[0] + 1;
+                                        yj = index[1] + 1;
+                                        if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                            confirm = find_unit[xi][yj];
+                                            if(confirm[0] == 'red') {       //움직일 수 있는곳에 red유닛이 있으면
+                                                if(board_condition[xi][yj] == 6) {      //움직일 수 있는 곳에 왕이 있으면
+                                                    let temp = [i,xi,yj];
+                                                    possible_gmae_over_unit.push(temp);
+                                                }
+                                                else {
+                                                    let temp = [i,xi,yj];
+                                                    possible_catch_opponent_unit.push(temp);
+                                                }
+                                            }
+                                            else if(confirm[0] != 'green') {
+                                                let temp = [i,xi,yj];
+                                                possible_move_empty.push(temp);
+                                            }
+                                        }
+                                        break;
+    
+                                    case 6:
+                                        xi = index[0] + 1;
+                                        yj = index[1];
+                                        if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                            confirm = find_unit[xi][yj];
+                                            if(confirm[0] == 'red') {       //움직일 수 있는곳에 red유닛이 있으면
+                                                if(board_condition[xi][yj] == 6) {      //움직일 수 있는 곳에 왕이 있으면
+                                                    let temp = [i,xi,yj];
+                                                    possible_gmae_over_unit.push(temp);
+                                                }
+                                                else {
+                                                    let temp = [i,xi,yj];
+                                                    possible_catch_opponent_unit.push(temp);
+                                                }
+                                            }
+                                            else if(confirm[0] != 'green') {
+                                                let temp = [i,xi,yj];
+                                                possible_move_empty.push(temp);
+                                            }
+                                        }
+                                        break;
+    
+                                    case 7:
+                                        xi = index[0] + 1;
+                                        yj = index[1] - 1;
+                                        if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                            confirm = find_unit[xi][yj];
+                                            if(confirm[0] == 'red') {       //움직일 수 있는곳에 red유닛이 있으면
+                                                if(board_condition[xi][yj] == 6) {      //움직일 수 있는 곳에 왕이 있으면
+                                                    let temp = [i,xi,yj];
+                                                    possible_gmae_over_unit.push(temp);
+                                                }
+                                                else {
+                                                    let temp = [i,xi,yj];
+                                                    possible_catch_opponent_unit.push(temp);
+                                                }
+                                            }
+                                            else if(confirm[0] != 'green') {
+                                                let temp = [i,xi,yj];
+                                                possible_move_empty.push(temp);
+                                            }
+                                        }
+                                        break;
+    
+                                    case 9: 
+                                        xi = index[0];
+                                        yj = index[1] - 1;
+                                        if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                            confirm = find_unit[xi][yj];
+                                            if(confirm[0] == 'red') {       //움직일 수 있는곳에 red유닛이 있으면
+                                                if(board_condition[xi][yj] == 6) {      //움직일 수 있는 곳에 왕이 있으면
+                                                    let temp = [i,xi,yj];
+                                                    possible_gmae_over_unit.push(temp);
+                                                }
+                                                else {
+                                                    let temp = [i,xi,yj];
+                                                    possible_catch_opponent_unit.push(temp);
+                                                }
+                                            }
+                                            else if(confirm[0] != 'green') {
+                                                let temp = [i,xi,yj];
+                                                possible_move_empty.push(temp);
+                                            }
+                                        }
+                                        break;
+    
+                                    case 11:
+                                        xi = index[0] - 1;
+                                        yj = index[1] - 1;
+                                        if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                            confirm = find_unit[xi][yj];
+                                            if(confirm[0] == 'red') {       //움직일 수 있는곳에 red유닛이 있으면
+                                                if(board_condition[xi][yj] == 6) {      //움직일 수 있는 곳에 왕이 있으면
+                                                    let temp = [i,xi,yj];
+                                                    possible_gmae_over_unit.push(temp);
+                                                }
+                                                else {
+                                                    let temp = [i,xi,yj];
+                                                    possible_catch_opponent_unit.push(temp);
+                                                }
+                                            }
+                                            else if(confirm[0] != 'green') {
+                                                let temp = [i,xi,yj];
+                                                possible_move_empty.push(temp);
+                                            }
+                                        }
+                                        break;
+    
+                                    case 12:
+                                        xi = index[0] -1;
+                                        yj = index[1];
+                                        if(xi >= 2 && xi <= 5 && yj >= 0 && yj <= 2) {
+                                            confirm = find_unit[xi][yj];
+                                            if(confirm[0] == 'red') {       //움직일 수 있는곳에 red유닛이 있으면
+                                                if(board_condition[xi][yj] == 6) {      //움직일 수 있는 곳에 왕이 있으면
+                                                    let temp = [i,xi,yj];
+                                                    possible_gmae_over_unit.push(temp);
+                                                }
+                                                else {
+                                                    let temp = [i,xi,yj];
+                                                    possible_catch_opponent_unit.push(temp);
+                                                }
+                                            }
+                                            else if(confirm[0] != 'green') {
+                                                let temp = [i,xi,yj];
+                                                possible_move_empty.push(temp);
+                                            }
+                                        }
+                                        break;
+    
+                                }
+                            });
                         }
-                    }
+                        
+                    } 
+                }
+                
+                // if(possible_gmae_over_unit) {
+                //     game_over = 2;
+                // }
+                // else if(possible_catch_opponent_unit) {
+                //     for(let i=0;i<possible_catch_opponent_unit.length;i++) {
+
+                //     }
+                //     turn++;
+                // }
+                // else if(possible_move_empty) {
+                //     turn++;
+                // }
+                //게임 종료확인
+                if(game_over == 0) {
+                    board.draw();
+                }
+                else {
+                    board.clear();
+                    board.game_over_and_show_result();
                 }
             }   //초록턴일때 끝
         }
@@ -1046,7 +1266,7 @@ function multi_game_start() {
                             }
                             board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;
                             let d_num = board_condition[index[0]][index[1]];
-                            if(selected_unit[1] == 4) {                                             //고른말이 자 일때 
+                            if(selected_unit[1] == 4 || selected_unit[1] == 3) {                                             //고른말이 자 일때 
                                 if(find_opponent_castle('red') == index[0]) {                       //상대 진영으로 넘어가면
                                     unit[find_unit_index_form_d(selected_unit[1])].kind = '後';     //후로 바뀐다
                                     unit[find_unit_index_form_d(selected_unit[1])].move = [1,3,6,9,11,12];
@@ -1149,7 +1369,7 @@ function multi_game_start() {
                             board_condition[selected_unit_location[0]][selected_unit_location[1]] = -1;     //움직인 말의 원래자리는 빈자리
                             let d_num = parseInt(board_condition[index[0]][index[1]]);      //바꿀 말확인
                             console.log(selected_unit[1],find_opponent_castle('green'), index[0]);
-                            if(selected_unit[1] == 3) {
+                            if(selected_unit[1] == 3  || selected_unit[1] == 4) {
                                 if(find_opponent_castle('green') == index[0]) {
                                     unit[find_unit_index_form_d(selected_unit[1])].kind = '後';
                                     unit[find_unit_index_form_d(selected_unit[1])].move = [3,5,6,7,9,12];
