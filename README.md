@@ -1,4 +1,4 @@
-Game [12 Chess] made by javascript on html
+Game [12 Chess] made of javascript on html
 
 Play: https://ns-jin.github.io/12chess/index.html
 
