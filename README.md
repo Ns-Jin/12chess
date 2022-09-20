@@ -1,5 +1,14 @@
-Game [12 Chess] made of javascript on html
+# 12 Chess
+#### Game [12 Chess] made of javascript on html
 
-Play: https://ns-jin.github.io/12chess/index.html
+## Game Play
++ Link: [12 Chess](https://ns-jin.github.io/12chess/index.html)
 
-메인페이지에 내에 12 Chess 클릭 후 2 Player방식으로 선택 후 game play(1 Player AI 개발 필요, 미완성)
+## How to play
+1. Click the link above
+2. Click the [12 Chess game] button
+3. Choose the play type (Type 1 player is incomplete. Choose 2 player type)
+4. Enjoy this game!
+
+## Game rules
++ 
